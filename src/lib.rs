@@ -1,5 +1,6 @@
-use hex::{FromHex};
-use base64::{encode};
+use base64::encode;
+use hex::FromHex;
+use std::str;
 
 pub fn from_hex(h: String) -> Option<Vec<u8>> {
     Vec::<u8>::from_hex(h).ok()
@@ -18,7 +19,7 @@ pub fn xor(a: &Vec<u8>, b: &Vec<u8>) -> Option<Vec<u8>> {
         c.push(a[i] ^ b[i % m])
     }
 
-    return Some(c)
+    return Some(c);
 }
 
 pub fn count(b: &Vec<u8>, c: u8) -> i32 {
@@ -29,5 +30,33 @@ pub fn count(b: &Vec<u8>, c: u8) -> i32 {
             sum += 1;
         }
     }
-    return sum
+    return sum;
+}
+
+pub struct Result {
+    pub n_spaces: i32,
+    pub result: String,
+}
+
+pub fn best_xor(m: &Vec<u8>) -> Result {
+    let mut result = Result {
+        n_spaces: -1,
+        result: String::new(),
+    };
+
+    for i in 0..=255 {
+        let res = xor(&m, &vec![i]).unwrap();
+        match str::from_utf8(&res) {
+            Ok(r) => {
+                let n_spaces = count(&res, String::from(' ').as_bytes()[0]);
+                if n_spaces > result.n_spaces {
+                    result.n_spaces = n_spaces;
+                    result.result = r.to_string()
+                }
+            },
+            Err(_) => continue,
+        }
+    }
+
+    return result;
 }
