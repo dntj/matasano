@@ -1,4 +1,4 @@
-use base64::encode;
+use base64;
 use hex::{FromHex, ToHex};
 use std::str;
 
@@ -10,9 +10,14 @@ pub fn to_hex(b: Vec<u8>) -> String {
     return b.encode_hex();
 }
 
-pub fn to_base64(bb: Vec<u8>) -> String {
-    encode(bb)
+pub fn from_base64(b: String) -> Option<Vec<u8>> {
+    base64::decode(b).ok()
 }
+
+pub fn to_base64(bb: Vec<u8>) -> String {
+    base64::encode(bb)
+}
+
 
 pub fn xor(a: &Vec<u8>, b: &Vec<u8>) -> Vec<u8> {
     let n = a.len();
@@ -63,4 +68,20 @@ pub fn best_xor(m: &Vec<u8>) -> Result {
     }
 
     return result;
+}
+
+pub fn hamming_distance(a: &str, b: &str) -> u32 {
+    let merged = xor(&String::from(a).as_bytes().to_vec(), &String::from(b).as_bytes().to_vec());
+
+    let mut distance: u32 = 0;
+    for mut b in merged {
+        for _ in 0..8 {
+            if b & 1 == 1 {
+                distance += 1;
+            }
+            b >>= 1;
+        }
+    }
+
+    return distance;
 }

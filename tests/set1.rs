@@ -39,13 +39,13 @@ mod tests {
 
   #[test]
   fn challenge4() {
-    let contents = fs::read_to_string("tests/4.txt").expect("failed to read file");
+    let file = fs::read_to_string("tests/4.txt").expect("failed to read file");
 
     let mut r = Result {
       n_spaces: -1,
       result: String::new(),
     };
-    for s in contents.split_ascii_whitespace() {
+    for s in file.split_ascii_whitespace() {
       let raw = from_hex(s.to_string()).expect("bad hex");
       let this = best_xor(&raw);
       if this.n_spaces > r.n_spaces {
@@ -54,7 +54,6 @@ mod tests {
       }
     }
 
-    println!("Best: {}", r.result);
     assert_eq!(r.result, "Now that the party is jumping\n")
   }
 
@@ -70,5 +69,15 @@ mod tests {
       got,
       String::from("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"),
     );
+  }
+
+  #[test]
+  fn challenge6() {
+    assert_eq!(hamming_distance("this is a test", "wokka wokka!!!"), 37);
+
+    let file = fs::read_to_string("tests/6.txt").expect("failed to read file");
+    let contents = file.replace("\n", "");
+
+    let encrypted = from_base64(contents).expect("failed to decode64 contents");
   }
 }
