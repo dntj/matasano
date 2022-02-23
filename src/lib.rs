@@ -1,16 +1,20 @@
 use base64::encode;
-use hex::FromHex;
+use hex::{FromHex, ToHex};
 use std::str;
 
 pub fn from_hex(h: String) -> Option<Vec<u8>> {
     Vec::<u8>::from_hex(h).ok()
 }
 
+pub fn to_hex(b: Vec<u8>) -> String {
+    return b.encode_hex();
+}
+
 pub fn to_base64(bb: Vec<u8>) -> String {
     encode(bb)
 }
 
-pub fn xor(a: &Vec<u8>, b: &Vec<u8>) -> Option<Vec<u8>> {
+pub fn xor(a: &Vec<u8>, b: &Vec<u8>) -> Vec<u8> {
     let n = a.len();
     let m = b.len();
 
@@ -19,7 +23,7 @@ pub fn xor(a: &Vec<u8>, b: &Vec<u8>) -> Option<Vec<u8>> {
         c.push(a[i] ^ b[i % m])
     }
 
-    return Some(c);
+    return c;
 }
 
 pub fn count(b: &Vec<u8>, c: u8) -> i32 {
@@ -45,7 +49,7 @@ pub fn best_xor(m: &Vec<u8>) -> Result {
     };
 
     for i in 0..=255 {
-        let res = xor(&m, &vec![i]).unwrap();
+        let res = xor(&m, &vec![i]);
         match str::from_utf8(&res) {
             Ok(r) => {
                 let n_spaces = count(&res, String::from(' ').as_bytes()[0]);
@@ -53,7 +57,7 @@ pub fn best_xor(m: &Vec<u8>) -> Result {
                     result.n_spaces = n_spaces;
                     result.result = r.to_string()
                 }
-            },
+            }
             Err(_) => continue,
         }
     }
