@@ -41,15 +41,16 @@ mod tests {
   fn challenge4() {
     let file = fs::read_to_string("tests/4.txt").expect("failed to read file");
 
-    let mut r = Result {
-      n_spaces: -1,
+    let mut r = ScoredXOR {
       result: String::new(),
+      score: 0,
+      key: 0,
     };
     for s in file.split_ascii_whitespace() {
       let raw = from_hex(s.to_string()).expect("bad hex");
       let this = best_xor(&raw);
-      if this.n_spaces > r.n_spaces {
-        r.n_spaces = this.n_spaces;
+      if this.score > r.score {
+        r.score = this.score;
         r.result = this.result;
       }
     }
@@ -73,11 +74,21 @@ mod tests {
 
   #[test]
   fn challenge6() {
-    assert_eq!(hamming_distance("this is a test", "wokka wokka!!!"), 37);
+    assert_eq!(hamming_distance(&[0], &[0]), 0);
+    assert_eq!(hamming_distance(&[0], &[0xff]), 8);
+    assert_eq!(hamming_distance(&[0b10101010], &[0b1010101]), 8);
+    assert_eq!(hamming_distance(&[0b11110000], &[0b11111111]), 4);
+    assert_eq!(hamming_distance(&[0b11110000, 1, 2], &[0b11111111, 0, 3]), 6);
+    assert_eq!(hamming_distance(&String::from("this is a test").as_bytes(), &String::from("wokka wokka!!!").as_bytes()), 37);
 
     let file = fs::read_to_string("tests/6.txt").expect("failed to read file");
     let contents = file.replace("\n", "");
 
     let encrypted = from_base64(contents).expect("failed to decode64 contents");
+
+    let key = find_key(&encrypted);
+    let decrypted = String::from_utf8(xor(&encrypted, &key)).unwrap();
+
+    assert!(decrypted.starts_with("I'm back and I'm ringin' the bell"));
   }
 }
