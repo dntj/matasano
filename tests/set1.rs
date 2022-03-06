@@ -3,6 +3,9 @@ mod tests {
   use matasano::*;
   use std::fs;
   use std::str;
+  use crypto_common::KeyInit;
+  use cipher::BlockDecrypt;
+  use aes;
 
   #[test]
   fn challenge1() {
@@ -88,6 +91,24 @@ mod tests {
 
     let key = find_key(&encrypted);
     let decrypted = String::from_utf8(xor(&encrypted, &key)).unwrap();
+
+    assert!(decrypted.starts_with("I'm back and I'm ringin' the bell"));
+  }
+
+  #[test]
+  fn challenge7() {
+    let file = fs::read_to_string("tests/7.txt").expect("failed to read file");
+    let contents = file.replace("\n", "");
+
+    let k = aes::Aes128::new_from_slice(b"YELLOW SUBMARINE").unwrap();
+
+    let mut bb = from_base64(contents).expect("failed to decode64 contents");
+    for i in 0..(bb.len()/16) {
+      let mut block = aes::Block::from_mut_slice(&mut bb[i*16..(i+1)*16]);
+      k.decrypt_block(&mut block);
+    }
+
+    let decrypted = String::from_utf8(bb).unwrap();
 
     assert!(decrypted.starts_with("I'm back and I'm ringin' the bell"));
   }
