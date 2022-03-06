@@ -1,11 +1,14 @@
 #[cfg(test)]
 mod tests {
-  use matasano::*;
+  use std::collections;
   use std::fs;
   use std::str;
-  use crypto_common::KeyInit;
-  use cipher::BlockDecrypt;
+
   use aes;
+  use cipher::BlockDecrypt;
+  use crypto_common::KeyInit;
+
+  use matasano::*;
 
   #[test]
   fn challenge1() {
@@ -81,8 +84,17 @@ mod tests {
     assert_eq!(hamming_distance(&[0], &[0xff]), 8);
     assert_eq!(hamming_distance(&[0b10101010], &[0b1010101]), 8);
     assert_eq!(hamming_distance(&[0b11110000], &[0b11111111]), 4);
-    assert_eq!(hamming_distance(&[0b11110000, 1, 2], &[0b11111111, 0, 3]), 6);
-    assert_eq!(hamming_distance(&String::from("this is a test").as_bytes(), &String::from("wokka wokka!!!").as_bytes()), 37);
+    assert_eq!(
+      hamming_distance(&[0b11110000, 1, 2], &[0b11111111, 0, 3]),
+      6
+    );
+    assert_eq!(
+      hamming_distance(
+        &String::from("this is a test").as_bytes(),
+        &String::from("wokka wokka!!!").as_bytes()
+      ),
+      37
+    );
 
     let file = fs::read_to_string("tests/6.txt").expect("failed to read file");
     let contents = file.replace("\n", "");
@@ -103,13 +115,38 @@ mod tests {
     let k = aes::Aes128::new_from_slice(b"YELLOW SUBMARINE").unwrap();
 
     let mut bb = from_base64(contents).expect("failed to decode64 contents");
-    for i in 0..(bb.len()/16) {
-      let mut block = aes::Block::from_mut_slice(&mut bb[i*16..(i+1)*16]);
+    for i in 0..(bb.len() / 16) {
+      let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
       k.decrypt_block(&mut block);
     }
 
     let decrypted = String::from_utf8(bb).unwrap();
 
     assert!(decrypted.starts_with("I'm back and I'm ringin' the bell"));
+  }
+
+  #[test]
+  fn challenge8() {
+    let file = fs::read_to_string("tests/8.txt").expect("failed to read file");
+
+    let mut found = "";
+    for s in file.split_ascii_whitespace() {
+      let mut counts = collections::HashMap::<&str, u8>::new();
+      for i in 0..(s.len() / 32) {
+        let k = &s[32 * i..32 * (i + 1)];
+        *counts.entry(k).or_default() += 1;
+      }
+      for (_, v) in &counts {
+        if *v > 1 {
+          if found != "" {
+            panic!("found multiple ECB candidates");
+          }
+          found = s;
+          break;
+        }
+      }
+    }
+
+    assert!(found.starts_with("d880619740a8a19b7840a8a31c810a"));
   }
 }
