@@ -129,3 +129,14 @@ pub fn find_key(bb: &[u8]) -> Vec<u8> {
 
     key
 }
+
+pub fn pad(bb: &[u8], n: usize, c: u8) -> Vec<u8> {
+    let mut padded = Vec::from(bb);
+
+    if n > bb.len() {
+        let diff = n - bb.len() % n;
+        padded.extend([c].repeat(diff));
+    }
+
+    padded
+}
