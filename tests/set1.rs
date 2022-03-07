@@ -4,10 +4,6 @@ mod tests {
   use std::fs;
   use std::str;
 
-  use aes;
-  use cipher::BlockDecrypt;
-  use crypto_common::KeyInit;
-
   use matasano::*;
 
   #[test]
@@ -23,10 +19,6 @@ mod tests {
     let msg = from_hex("1c0111001f010100061a024b53535009181c").unwrap();
     let mask = from_hex("686974207468652062756c6c277320657965").unwrap();
     let want = from_hex("746865206b696420646f6e277420706c6179").unwrap();
-
-    println!("{}", str::from_utf8(&msg).unwrap());
-    println!("{}", str::from_utf8(&mask).unwrap());
-    println!("{}", str::from_utf8(&want).unwrap());
 
     assert_eq!(xor(&msg, &mask), want)
   }
@@ -105,17 +97,10 @@ mod tests {
     let file = fs::read_to_string("tests/7.txt").expect("failed to read file");
     let contents = file.replace("\n", "");
 
-    let k = aes::Aes128::new_from_slice(b"YELLOW SUBMARINE").unwrap();
+    let bb = from_base64(&contents).expect("failed to decode64 contents");
+    let dec = aes128_decrypt_ecb(b"YELLOW SUBMARINE", &bb).unwrap();
 
-    let mut bb = from_base64(&contents).expect("failed to decode64 contents");
-    for i in 0..(bb.len() / 16) {
-      let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
-      k.decrypt_block(&mut block);
-    }
-
-    let decrypted = String::from_utf8(bb).unwrap();
-
-    assert!(decrypted.starts_with("I'm back and I'm ringin' the bell"));
+    assert!(String::from_utf8(dec).unwrap().starts_with("I'm back and I'm ringin' the bell"));
   }
 
   #[test]
