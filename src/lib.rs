@@ -51,29 +51,31 @@ pub struct ScoredXOR {
     key: u8,
 }
 
-pub fn best_xor(m: &[u8]) -> ScoredXOR {
-    let mut result = ScoredXOR {
-        result: String::new(),
-        score: 0,
-        key: 0,
-    };
+impl ScoredXOR {
+    pub fn best(m: &[u8]) -> ScoredXOR {
+        let mut result = ScoredXOR {
+            result: String::new(),
+            score: 0,
+            key: 0,
+        };
 
-    for i in 0..=255 {
-        let res = xor(&m, &vec![i]);
-        match String::from_utf8(res) {
-            Ok(r) => {
-                let char_counts = count(r.as_bytes(), b" eEtTAINOSainos");
-                if char_counts > result.score {
-                    result.score = char_counts;
-                    result.key = i;
-                    result.result = r.to_string()
+        for i in 0..=255 {
+            let res = xor(&m, &vec![i]);
+            match String::from_utf8(res) {
+                Ok(r) => {
+                    let char_counts = count(r.as_bytes(), b" eEtTAINOSainos");
+                    if char_counts > result.score {
+                        result.score = char_counts;
+                        result.key = i;
+                        result.result = r.to_string()
+                    }
                 }
+                Err(_) => continue,
             }
-            Err(_) => continue,
         }
-    }
 
-    result
+        result
+    }
 }
 
 pub fn hamming_distance(a: &[u8], b: &[u8]) -> u32 {
@@ -126,7 +128,7 @@ pub fn find_key(bb: &[u8]) -> Vec<u8> {
                 block.push(*b);
             }
         }
-        key.push(best_xor(&block).key);
+        key.push(ScoredXOR::best(&block).key);
     }
 
     key

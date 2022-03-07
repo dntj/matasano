@@ -28,7 +28,7 @@ mod tests {
     let msg =
       from_hex("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736").unwrap();
 
-    let r = best_xor(&msg);
+    let r = ScoredXOR::best(&msg);
 
     // Run test with `cargo test -- --nocapture` to see output.
     assert_eq!(r.result, "Cooking MC's like a pound of bacon")
@@ -40,7 +40,7 @@ mod tests {
 
     let mut r: Option<ScoredXOR> = None;
     for s in file.split_ascii_whitespace() {
-      let this = best_xor(&from_hex(s).expect("bad hex"));
+      let this = ScoredXOR::best(&from_hex(s).expect("bad hex"));
       if r.is_none() || this.score > r.as_ref().unwrap().score {
         r = Some(this);
       }
