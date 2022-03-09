@@ -28,18 +28,18 @@ mod tests {
     let bb = from_base64(&contents).expect("failed to decode64 contents");
 
     let iv = [0].repeat(16);
-    let decrypted = aes128_decrypt_cbc(b"YELLOW SUBMARINE", &iv, &bb).unwrap();
+    let k = b"YELLOW SUBMARINE";
+    let coder = aes::CBC::new(k, &iv).unwrap();
+    let decrypted = coder.decrypt(&bb);
 
     assert!(str::from_utf8(&decrypted)
       .unwrap()
       .starts_with("I'm back and I'm ringin' the bell"));
 
-    let encrypted = aes128_encrypt_cbc(b"YELLOW SUBMARINE", &iv, &decrypted).unwrap();
+    let encrypted = coder.encrypt(&decrypted);
     assert_eq!(encrypted, bb);
   }
 
   #[test]
-  fn challenge11() {
-
-  }
+  fn challenge11() {}
 }

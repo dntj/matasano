@@ -98,11 +98,13 @@ mod tests {
     let contents = file.replace("\n", "");
 
     let bb = from_base64(&contents).expect("failed to decode64 contents");
-    let dec = aes128_decrypt_ecb(b"YELLOW SUBMARINE", &bb).unwrap();
+
+    let coder = aes::ECB::new(b"YELLOW SUBMARINE").unwrap();
+    let dec = coder.decrypt(&bb);
 
     assert!(str::from_utf8(&dec).unwrap().starts_with("I'm back and I'm ringin' the bell"));
 
-    let enc = aes128_encrypt_ecb(b"YELLOW SUBMARINE", &dec).unwrap();
+    let enc = coder.encrypt(&dec);
     assert_eq!(enc, bb);
   }
 

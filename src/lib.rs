@@ -1,8 +1,7 @@
-use aes;
 use base64;
-use cipher::{BlockDecrypt, BlockEncrypt};
-use crypto_common::KeyInit;
 use hex::{FromHex, ToHex};
+
+pub mod aes;
 
 pub fn from_hex(h: &str) -> Option<Vec<u8>> {
     Vec::<u8>::from_hex(h).ok()
@@ -132,98 +131,6 @@ pub fn find_key(bb: &[u8]) -> Vec<u8> {
     }
 
     key
-}
-
-pub fn aes128_encrypt_ecb(k: &[u8], enc: &[u8]) -> Result<Vec<u8>, String> {
-    let k_res = aes::Aes128::new_from_slice(k);
-    if let Err(_) = k_res {
-        return Err("bad key".to_string());
-    }
-
-    let k = k_res.unwrap();
-
-    let mut bb = Vec::from(enc);
-    for i in 0..(bb.len() / 16) {
-        let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
-        k.encrypt_block(&mut block);
-    }
-
-    Ok(bb)
-}
-
-pub fn aes128_decrypt_ecb(k: &[u8], enc: &[u8]) -> Result<Vec<u8>, String> {
-    let k_res = aes::Aes128::new_from_slice(k);
-    if let Err(_) = k_res {
-        return Err("bad key".to_string());
-    }
-
-    let k = k_res.unwrap();
-
-    let mut bb = Vec::from(enc);
-    for i in 0..(bb.len() / 16) {
-        let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
-        k.decrypt_block(&mut block);
-    }
-
-    Ok(bb)
-}
-
-pub fn aes128_encrypt_cbc(k: &[u8], iv: &[u8], enc: &[u8]) -> Result<Vec<u8>, String> {
-    let k_res = aes::Aes128::new_from_slice(k);
-    if let Err(_) = k_res {
-        return Err("bad key".to_string());
-    }
-
-    let k = k_res.unwrap();
-    if iv.len() != 16 {
-        return Err("iv must be 16 bytes long".to_string());
-    }
-
-    let mut bb = Vec::from(enc);
-    for i in 0..bb.len() / 16 {
-        for j in 0..16 {
-            if i == 0 {
-                bb[j] ^= iv[j];
-            } else {
-                bb[i * 16 + j] ^= bb[(i - 1) * 16 + j];
-            }
-        }
-
-        let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
-        k.encrypt_block(&mut block);
-    }
-
-    Ok(bb)
-}
-
-pub fn aes128_decrypt_cbc(k: &[u8], iv: &[u8], enc: &[u8]) -> Result<Vec<u8>, String> {
-    let k_res = aes::Aes128::new_from_slice(k);
-    if let Err(_) = k_res {
-        return Err("bad key".to_string());
-    }
-
-    let k = k_res.unwrap();
-    if iv.len() != 16 {
-        return Err("iv must be 16 bytes long".to_string());
-    }
-
-    let mut bb = Vec::from(enc);
-    let n = bb.len() / 16;
-    for i in 0..n {
-        let mut block = aes::Block::from_mut_slice(&mut bb[(n - 1 - i) * 16..(n - i) * 16]);
-
-        k.decrypt_block(&mut block);
-
-        for j in 0..16 {
-            if i == n - 1 {
-                bb[j] ^= iv[j];
-            } else {
-                bb[(n - i - 1) * 16 + j] ^= bb[(n - i - 2) * 16 + j];
-            }
-        }
-    }
-
-    Ok(bb)
 }
 
 pub fn pad(bb: &[u8], n: usize, c: u8) -> Vec<u8> {
