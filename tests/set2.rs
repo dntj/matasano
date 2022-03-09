@@ -6,7 +6,7 @@ mod tests {
   use matasano::*;
 
   #[test]
-  fn challenge9() {
+  fn challenge09() {
     assert_eq!(pad(b"YELLOW SUBMARINE", 16, 0), b"YELLOW SUBMARINE");
     assert_eq!(pad(b"YELLOW SUBMARINE", 17, 1), b"YELLOW SUBMARINE\x01");
     assert_eq!(pad(b"YELLOW SUBMARINE", 18, 2), b"YELLOW SUBMARINE\x02\x02");
@@ -22,7 +22,7 @@ mod tests {
 
   #[test]
   fn challenge10() {
-    let file = fs::read_to_string("tests/10.txt").expect("failed to read file");
+    let file = fs::read_to_string("tests/data/10.txt").expect("failed to read file");
     let contents = file.replace("\n", "");
 
     let bb = from_base64(&contents).expect("failed to decode64 contents");
@@ -36,5 +36,10 @@ mod tests {
 
     let encrypted = aes128_encrypt_cbc(b"YELLOW SUBMARINE", &iv, &decrypted).unwrap();
     assert_eq!(encrypted, bb);
+  }
+
+  #[test]
+  fn challenge11() {
+
   }
 }

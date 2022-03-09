@@ -36,7 +36,7 @@ mod tests {
 
   #[test]
   fn challenge4() {
-    let file = fs::read_to_string("tests/4.txt").expect("failed to read file");
+    let file = fs::read_to_string("tests/data/4.txt").expect("failed to read file");
 
     let mut r: Option<ScoredXOR> = None;
     for s in file.split_ascii_whitespace() {
@@ -81,7 +81,7 @@ mod tests {
       37
     );
 
-    let file = fs::read_to_string("tests/6.txt").expect("failed to read file");
+    let file = fs::read_to_string("tests/data/6.txt").expect("failed to read file");
     let contents = file.replace("\n", "");
 
     let encrypted = from_base64(&contents).expect("failed to decode64 contents");
@@ -94,7 +94,7 @@ mod tests {
 
   #[test]
   fn challenge7() {
-    let file = fs::read_to_string("tests/7.txt").expect("failed to read file");
+    let file = fs::read_to_string("tests/data/7.txt").expect("failed to read file");
     let contents = file.replace("\n", "");
 
     let bb = from_base64(&contents).expect("failed to decode64 contents");
@@ -105,7 +105,7 @@ mod tests {
 
   #[test]
   fn challenge8() {
-    let file = fs::read_to_string("tests/8.txt").expect("failed to read file");
+    let file = fs::read_to_string("tests/data/8.txt").expect("failed to read file");
 
     let mut found = "";
     for s in file.split_ascii_whitespace() {
