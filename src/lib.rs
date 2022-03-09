@@ -134,6 +134,23 @@ pub fn find_key(bb: &[u8]) -> Vec<u8> {
     key
 }
 
+pub fn aes128_encrypt_ecb(k: &[u8], enc: &[u8]) -> Result<Vec<u8>, String> {
+    let k_res = aes::Aes128::new_from_slice(k);
+    if let Err(_) = k_res {
+        return Err("bad key".to_string());
+    }
+
+    let k = k_res.unwrap();
+
+    let mut bb = Vec::from(enc);
+    for i in 0..(bb.len() / 16) {
+        let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
+        k.encrypt_block(&mut block);
+    }
+
+    Ok(bb)
+}
+
 pub fn aes128_decrypt_ecb(k: &[u8], enc: &[u8]) -> Result<Vec<u8>, String> {
     let k_res = aes::Aes128::new_from_slice(k);
     if let Err(_) = k_res {

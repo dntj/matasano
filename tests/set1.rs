@@ -100,7 +100,10 @@ mod tests {
     let bb = from_base64(&contents).expect("failed to decode64 contents");
     let dec = aes128_decrypt_ecb(b"YELLOW SUBMARINE", &bb).unwrap();
 
-    assert!(String::from_utf8(dec).unwrap().starts_with("I'm back and I'm ringin' the bell"));
+    assert!(str::from_utf8(&dec).unwrap().starts_with("I'm back and I'm ringin' the bell"));
+
+    let enc = aes128_encrypt_ecb(b"YELLOW SUBMARINE", &dec).unwrap();
+    assert_eq!(enc, bb);
   }
 
   #[test]
