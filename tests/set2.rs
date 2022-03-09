@@ -3,19 +3,20 @@ mod tests {
   use std::fs;
   use std::str;
 
+  use matasano::aes::Coder;
   use matasano::*;
 
   #[test]
   fn challenge09() {
-    assert_eq!(pad(b"YELLOW SUBMARINE", 16, 0), b"YELLOW SUBMARINE");
-    assert_eq!(pad(b"YELLOW SUBMARINE", 17, 1), b"YELLOW SUBMARINE\x01");
-    assert_eq!(pad(b"YELLOW SUBMARINE", 18, 2), b"YELLOW SUBMARINE\x02\x02");
+    assert_eq!(aes::pad(b"YELLOW SUBMARINE", 16), b"YELLOW SUBMARINE");
+    assert_eq!(aes::pad(b"YELLOW SUBMARINE", 17), b"YELLOW SUBMARINE\x04");
+    assert_eq!(aes::pad(b"YELLOW SUBMARINE", 18), b"YELLOW SUBMARINE\x04\x04");
     assert_eq!(
-      pad(b"YELLOW SUBMARINE", 19, 3),
-      b"YELLOW SUBMARINE\x03\x03\x03"
+      aes::pad(b"YELLOW SUBMARINE", 19),
+      b"YELLOW SUBMARINE\x04\x04\x04"
     );
     assert_eq!(
-      pad(b"YELLOW SUBMARINE", 20, 4),
+      aes::pad(b"YELLOW SUBMARINE", 20),
       b"YELLOW SUBMARINE\x04\x04\x04\x04"
     );
   }
@@ -41,5 +42,18 @@ mod tests {
   }
 
   #[test]
-  fn challenge11() {}
+  fn challenge11() {
+    let file = fs::read_to_string("tests/data/11.txt").expect("failed to read file");
+
+    for _ in 0..10 {
+      let res = random_encrypt(file.as_bytes());
+      let got = detect_block_mode(&res.ciphertext);
+
+      if res.mode == got {
+        return;
+      }
+    }
+
+    panic!("failed to detect correct block cipher mode in 10 attempts");
+  }
 }

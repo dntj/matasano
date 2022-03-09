@@ -2,6 +2,11 @@ use aes;
 use cipher::{BlockDecrypt, BlockEncrypt};
 use crypto_common::KeyInit;
 
+pub trait Coder {
+  fn encrypt(&self, plaintext: &[u8]) -> Vec<u8>;
+  fn decrypt(&self, ciphertext: &[u8]) -> Vec<u8>;
+}
+
 pub struct ECB {
   key: aes::Aes128,
 }
@@ -17,9 +22,11 @@ impl ECB {
       key: k_res.unwrap(),
     })
   }
+}
 
-  pub fn encrypt(&self, plain: &[u8]) -> Vec<u8> {
-    let mut bb = Vec::from(plain);
+impl Coder for ECB {
+  fn encrypt(&self, plain: &[u8]) -> Vec<u8> {
+    let mut bb = pad(plain, 16);
     for i in 0..(bb.len() / 16) {
       let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
       self.key.encrypt_block(&mut block);
@@ -28,7 +35,7 @@ impl ECB {
     bb
   }
 
-  pub fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
+  fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
     let mut bb = Vec::from(enc);
     for i in 0..(bb.len() / 16) {
       let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
@@ -59,9 +66,11 @@ impl CBC {
       iv: iv.to_owned(),
     })
   }
+}
 
-  pub fn encrypt(&self, enc: &[u8]) -> Vec<u8> {
-    let mut bb = Vec::from(enc);
+impl Coder for CBC {
+  fn encrypt(&self, enc: &[u8]) -> Vec<u8> {
+    let mut bb = pad(enc, 16);
     for i in 0..bb.len() / 16 {
       for j in 0..16 {
         if i == 0 {
@@ -78,7 +87,7 @@ impl CBC {
     bb
   }
 
-  pub fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
+  fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
     let mut bb = Vec::from(enc);
     let n = bb.len() / 16;
     for i in 0..n {
@@ -98,3 +107,15 @@ impl CBC {
     bb
   }
 }
+
+pub fn pad(bb: &[u8], n: usize) -> Vec<u8> {
+  let mut padded = Vec::from(bb);
+
+  if n > bb.len() {
+      let diff = n - bb.len() % n;
+      padded.extend([4].repeat(diff));
+  }
+
+  padded
+}
+

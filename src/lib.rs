@@ -1,5 +1,9 @@
 use base64;
 use hex::{FromHex, ToHex};
+use rand::{rngs::OsRng, RngCore};
+use std::collections;
+
+use crate::aes::Coder;
 
 pub mod aes;
 
@@ -133,13 +137,64 @@ pub fn find_key(bb: &[u8]) -> Vec<u8> {
     key
 }
 
-pub fn pad(bb: &[u8], n: usize, c: u8) -> Vec<u8> {
-    let mut padded = Vec::from(bb);
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub enum Mode {
+    ECB,
+    CBC,
+}
 
-    if n > bb.len() {
-        let diff = n - bb.len() % n;
-        padded.extend([c].repeat(diff));
+pub fn detect_block_mode(input: &[u8]) -> Mode {
+    let mut counts = collections::HashMap::<&[u8], u8>::new();
+    for i in 0..(input.len() / 16) {
+        let k = &input[16 * i..16 * (i + 1)];
+        *counts.entry(k).or_default() += 1;
+    }
+    for (_, v) in &counts {
+        if *v > 1 {
+            return Mode::CBC;
+        }
     }
 
-    padded
+    Mode::ECB
+}
+
+pub struct RandomEncrypted {
+    pub mode: Mode,
+    pub ciphertext: Vec<u8>,
+}
+
+pub fn random_encrypt(input: &[u8]) -> RandomEncrypted {
+    let mut key = [0u8; 16];
+    OsRng.fill_bytes(&mut key);
+
+    let ecb = OsRng.next_u32() & 1 == 1;
+    let n_pad_before = (OsRng.next_u32() % 6 + 5) as usize; // random ∈ [5, 10]
+    let n_pad_after = (OsRng.next_u32() % 6 + 5) as usize; // random ∈ [5, 10]
+
+    let mut plain = vec![0; n_pad_before];
+    OsRng.fill_bytes(&mut plain);
+
+    plain.extend(input);
+
+    let mut suffix = vec![0; n_pad_after];
+    OsRng.fill_bytes(&mut suffix);
+
+    plain.extend(suffix);
+
+    if ecb {
+        // Choose ECB with 50% probability.
+        RandomEncrypted {
+            mode: Mode::ECB,
+            ciphertext: aes::ECB::new(&key).unwrap().encrypt(&plain),
+        }
+    } else {
+        let mut iv = [0u8; 16];
+        OsRng.fill_bytes(&mut iv);
+
+        RandomEncrypted {
+            mode: Mode::CBC,
+            ciphertext: aes::CBC::new(&key, &iv).unwrap().encrypt(&plain),
+        }
+    }
 }

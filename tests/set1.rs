@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod tests {
-  use std::collections;
   use std::fs;
   use std::str;
 
+  use matasano::aes::Coder;
   use matasano::*;
+
 
   #[test]
   fn challenge1() {
@@ -114,19 +115,12 @@ mod tests {
 
     let mut found = "";
     for s in file.split_ascii_whitespace() {
-      let mut counts = collections::HashMap::<&str, u8>::new();
-      for i in 0..(s.len() / 32) {
-        let k = &s[32 * i..32 * (i + 1)];
-        *counts.entry(k).or_default() += 1;
-      }
-      for (_, v) in &counts {
-        if *v > 1 {
-          if found != "" {
-            panic!("found multiple ECB candidates");
-          }
-          found = s;
-          break;
+      if let Mode::CBC = detect_block_mode(&from_hex(s).unwrap()) {
+        if found != "" {
+          panic!("found multiple ECB candidates");
         }
+        found = s;
+        break;
       }
     }
 
