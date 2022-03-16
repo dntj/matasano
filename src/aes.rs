@@ -2,8 +2,11 @@ use aes;
 use cipher::{BlockDecrypt, BlockEncrypt};
 use crypto_common::KeyInit;
 
-pub trait Coder {
+pub trait Encrypter {
   fn encrypt(&self, plaintext: &[u8]) -> Vec<u8>;
+}
+
+pub trait Decrypter {
   fn decrypt(&self, ciphertext: &[u8]) -> Vec<u8>;
 }
 
@@ -24,7 +27,7 @@ impl ECB {
   }
 }
 
-impl Coder for ECB {
+impl Encrypter for ECB {
   fn encrypt(&self, plain: &[u8]) -> Vec<u8> {
     let mut bb = pad(plain, 16);
     for i in 0..(bb.len() / 16) {
@@ -34,7 +37,9 @@ impl Coder for ECB {
 
     bb
   }
+}
 
+impl Decrypter for ECB {
   fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
     let mut bb = Vec::from(enc);
     for i in 0..(bb.len() / 16) {
@@ -68,7 +73,7 @@ impl CBC {
   }
 }
 
-impl Coder for CBC {
+impl Encrypter for CBC {
   fn encrypt(&self, enc: &[u8]) -> Vec<u8> {
     let mut bb = pad(enc, 16);
     for i in 0..bb.len() / 16 {
@@ -86,7 +91,9 @@ impl Coder for CBC {
 
     bb
   }
+}
 
+impl Decrypter for CBC {
   fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
     let mut bb = Vec::from(enc);
     let n = bb.len() / 16;
@@ -111,11 +118,10 @@ impl Coder for CBC {
 pub fn pad(bb: &[u8], n: usize) -> Vec<u8> {
   let mut padded = Vec::from(bb);
 
-  if n > bb.len() {
-      let diff = n - bb.len() % n;
-      padded.extend([4].repeat(diff));
+  if bb.len() % n > 0 {
+    let diff = n - bb.len() % n;
+    padded.extend([4].repeat(diff));
   }
 
   padded
 }
-
