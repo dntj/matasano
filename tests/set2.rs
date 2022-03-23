@@ -3,14 +3,18 @@ mod tests {
   use std::fs;
   use std::str;
 
-  use matasano::aes::Coder;
+  use matasano::aes::{Decrypter, Encrypter};
+  use matasano::ecb;
   use matasano::*;
 
   #[test]
   fn challenge09() {
     assert_eq!(aes::pad(b"YELLOW SUBMARINE", 16), b"YELLOW SUBMARINE");
     assert_eq!(aes::pad(b"YELLOW SUBMARINE", 17), b"YELLOW SUBMARINE\x04");
-    assert_eq!(aes::pad(b"YELLOW SUBMARINE", 18), b"YELLOW SUBMARINE\x04\x04");
+    assert_eq!(
+      aes::pad(b"YELLOW SUBMARINE", 18),
+      b"YELLOW SUBMARINE\x04\x04"
+    );
     assert_eq!(
       aes::pad(b"YELLOW SUBMARINE", 19),
       b"YELLOW SUBMARINE\x04\x04\x04"
@@ -46,7 +50,7 @@ mod tests {
     let file = fs::read_to_string("tests/data/11.txt").expect("failed to read file");
 
     for _ in 0..10 {
-      let res = random_encrypt(file.as_bytes());
+      let res = RandomEncrypter::new(file.as_bytes());
       let got = detect_block_mode(&res.ciphertext);
 
       if res.mode == got {
@@ -55,5 +59,21 @@ mod tests {
     }
 
     panic!("failed to detect correct block cipher mode in 10 attempts");
+  }
+
+  #[test]
+  fn challenge12() {
+    let file = fs::read_to_string("tests/data/12.txt").expect("failed to read file");
+    let contents = file.replace("\n", "");
+
+    let unknown = from_base64(&contents).unwrap();
+
+    let encrypter = RandomKeyECB::new(unknown);
+
+    let decrypter = ecb::Decrypter::new(&encrypter);
+
+    assert!(str::from_utf8(&decrypter.decrypt())
+      .unwrap()
+      .starts_with("Rollin' in my 5.0"));
   }
 }

@@ -3,9 +3,10 @@ use hex::{FromHex, ToHex};
 use rand::{rngs::OsRng, RngCore};
 use std::collections;
 
-use crate::aes::Coder;
+use crate::aes::{Encrypter, ECB};
 
 pub mod aes;
+pub mod ecb;
 
 pub fn from_hex(h: &str) -> Option<Vec<u8>> {
     Vec::<u8>::from_hex(h).ok()
@@ -137,8 +138,7 @@ pub fn find_key(bb: &[u8]) -> Vec<u8> {
     key
 }
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Mode {
     ECB,
     CBC,
@@ -159,42 +159,70 @@ pub fn detect_block_mode(input: &[u8]) -> Mode {
     Mode::ECB
 }
 
-pub struct RandomEncrypted {
+pub struct RandomEncrypter {
     pub mode: Mode,
     pub ciphertext: Vec<u8>,
 }
 
-pub fn random_encrypt(input: &[u8]) -> RandomEncrypted {
-    let mut key = [0u8; 16];
-    OsRng.fill_bytes(&mut key);
+impl RandomEncrypter {
+    pub fn new(input: &[u8]) -> RandomEncrypter {
+        let mut key = [0u8; 16];
+        OsRng.fill_bytes(&mut key);
 
-    let ecb = OsRng.next_u32() & 1 == 1;
-    let n_pad_before = (OsRng.next_u32() % 6 + 5) as usize; // random ∈ [5, 10]
-    let n_pad_after = (OsRng.next_u32() % 6 + 5) as usize; // random ∈ [5, 10]
+        let ecb = OsRng.next_u32() & 1 == 1;
+        let n_pad_before = (OsRng.next_u32() % 6 + 5) as usize; // random ∈ [5, 10]
+        let n_pad_after = (OsRng.next_u32() % 6 + 5) as usize; // random ∈ [5, 10]
 
-    let mut plain = vec![0; n_pad_before];
-    OsRng.fill_bytes(&mut plain);
+        let mut plain = vec![0; n_pad_before];
+        OsRng.fill_bytes(&mut plain);
 
-    plain.extend(input);
+        plain.extend(input);
 
-    let mut suffix = vec![0; n_pad_after];
-    OsRng.fill_bytes(&mut suffix);
+        let mut suffix = vec![0; n_pad_after];
+        OsRng.fill_bytes(&mut suffix);
 
-    plain.extend(suffix);
+        plain.extend(suffix);
 
-    if ecb {
-        // Choose ECB with 50% probability.
-        RandomEncrypted {
-            mode: Mode::ECB,
-            ciphertext: aes::ECB::new(&key).unwrap().encrypt(&plain),
+        if ecb {
+            // Choose ECB with 50% probability.
+            RandomEncrypter {
+                mode: Mode::ECB,
+                ciphertext: aes::ECB::new(&key).unwrap().encrypt(&plain),
+            }
+        } else {
+            let mut iv = [0u8; 16];
+            OsRng.fill_bytes(&mut iv);
+
+            RandomEncrypter {
+                mode: Mode::CBC,
+                ciphertext: aes::CBC::new(&key, &iv).unwrap().encrypt(&plain),
+            }
         }
-    } else {
-        let mut iv = [0u8; 16];
-        OsRng.fill_bytes(&mut iv);
+    }
+}
 
-        RandomEncrypted {
-            mode: Mode::CBC,
-            ciphertext: aes::CBC::new(&key, &iv).unwrap().encrypt(&plain),
+pub struct RandomKeyECB {
+    coder: ECB,
+    suffix: Vec<u8>,
+}
+
+impl RandomKeyECB {
+    pub fn new(suffix: Vec<u8>) -> RandomKeyECB {
+        let mut key = [0u8; 16];
+        OsRng.fill_bytes(&mut key);
+
+        RandomKeyECB {
+            coder: aes::ECB::new(&key).unwrap(),
+            suffix: suffix,
         }
+    }
+}
+
+impl aes::Encrypter for RandomKeyECB {
+    fn encrypt(&self, plain: &[u8]) -> Vec<u8> {
+        let mut bb = Vec::from(plain);
+        bb.extend(&self.suffix);
+
+        self.coder.encrypt(&bb)
     }
 }

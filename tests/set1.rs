@@ -3,9 +3,8 @@ mod tests {
   use std::fs;
   use std::str;
 
-  use matasano::aes::Coder;
+  use matasano::aes::{Decrypter, Encrypter};
   use matasano::*;
-
 
   #[test]
   fn challenge1() {
@@ -103,7 +102,9 @@ mod tests {
     let coder = aes::ECB::new(b"YELLOW SUBMARINE").unwrap();
     let dec = coder.decrypt(&bb);
 
-    assert!(str::from_utf8(&dec).unwrap().starts_with("I'm back and I'm ringin' the bell"));
+    assert!(str::from_utf8(&dec)
+      .unwrap()
+      .starts_with("I'm back and I'm ringin' the bell"));
 
     let enc = coder.encrypt(&dec);
     assert_eq!(enc, bb);
