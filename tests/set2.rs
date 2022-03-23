@@ -72,7 +72,7 @@ mod tests {
 
     let decrypter = ecb::Decrypter::new(&encrypter);
 
-    assert!(str::from_utf8(&decrypter.decrypt())
+    assert!(str::from_utf8(&decrypter.decrypt().unwrap())
       .unwrap()
       .starts_with("Rollin' in my 5.0"));
   }
