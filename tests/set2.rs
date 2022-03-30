@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+  use std::collections::HashMap;
   use std::fs;
   use std::str;
 
@@ -68,12 +69,57 @@ mod tests {
 
     let unknown = from_base64(&contents).unwrap();
 
-    let encrypter = RandomKeyECB::new(unknown);
+    let encrypter = RandomKeyECB::with_suffix(unknown);
 
     let decrypter = ecb::Decrypter::new(&encrypter);
 
     assert!(str::from_utf8(&decrypter.decrypt().unwrap())
       .unwrap()
       .starts_with("Rollin' in my 5.0"));
+  }
+
+  #[test]
+  fn challenge13() {
+    let ecb = RandomKeyECB::new();
+
+    let enc_profile_for = |email: &str| -> Vec<u8> {
+      let mut kvs = Vec::new();
+      kvs.push(format!(
+        "email={}",
+        email.replace("&", "%26").replace("=", "%3D")
+      ));
+      kvs.push("uid=10".to_string());
+      kvs.push("role=user".to_string());
+
+      let encoded = kvs.join("&");
+      ecb.encrypt(encoded.as_bytes())
+    };
+
+    let decrypt_profile = |ct: &[u8]| -> Result<HashMap<String, String>, std::str::Utf8Error> {
+      let dec = ecb.decrypt(ct);
+      let mut result = HashMap::new();
+
+      for kv in str::from_utf8(&dec)?.split("&") {
+        let parts: Vec<&str> = kv.split("=").collect();
+        result.insert(
+          String::from(parts[0]),
+          parts[1].replace("%26", "&").replace("%3D", "="),
+        );
+      }
+
+      Ok(result)
+    };
+
+    // Craft 2nd block with `admin` at start, ending with \x04 padding characters.
+    let mut pad = String::from("0000000000admin");
+    pad.push_str(str::from_utf8(&[4].repeat(11)).unwrap());
+    let admin_block = &enc_profile_for(&pad)[16..32];
+    // Craft email with length such that `user` falls into block by itself.
+    let mut enc = enc_profile_for("x@example.com");
+    enc.truncate(32);
+    enc.extend_from_slice(admin_block);
+
+    let profile = decrypt_profile(&enc).unwrap();
+    assert_eq!(profile.get("role").unwrap(), "admin");
   }
 }
