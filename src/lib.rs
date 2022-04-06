@@ -203,28 +203,39 @@ impl RandomEncrypter {
 
 pub struct RandomKeyECB {
     coder: ECB,
+    prefix: Vec<u8>,
     suffix: Vec<u8>,
 }
 
 impl RandomKeyECB {
     pub fn new() -> RandomKeyECB {
-        RandomKeyECB::with_suffix(Vec::new())
-    }
-
-    pub fn with_suffix(suffix: Vec<u8>) -> RandomKeyECB {
         let mut key = [0u8; 16];
         OsRng.fill_bytes(&mut key);
 
         RandomKeyECB {
             coder: aes::ECB::new(&key).unwrap(),
-            suffix: suffix,
+            prefix: Vec::new(),
+            suffix: Vec::new(),
         }
+    }
+
+    pub fn with_random_prefix(self) -> RandomKeyECB {
+        let l = (OsRng.next_u32() % 256) as usize;
+        let mut prefix = vec![0; l];
+        OsRng.fill_bytes(&mut prefix);
+
+        RandomKeyECB { prefix, ..self }
+    }
+
+    pub fn with_suffix(self, suffix: Vec<u8>) -> RandomKeyECB {
+        RandomKeyECB { suffix, ..self }
     }
 }
 
 impl aes::Encrypter for RandomKeyECB {
     fn encrypt(&self, plain: &[u8]) -> Vec<u8> {
-        let mut bb = Vec::from(plain);
+        let mut bb = Vec::clone(&self.prefix);
+        bb.extend(plain);
         bb.extend(&self.suffix);
 
         self.coder.encrypt(&bb)
@@ -233,9 +244,23 @@ impl aes::Encrypter for RandomKeyECB {
 
 impl aes::Decrypter for RandomKeyECB {
     fn decrypt(&self, plain: &[u8]) -> Vec<u8> {
-        let mut bb = Vec::from(plain);
-        bb.extend(&self.suffix);
+        let mut bb = self.coder.decrypt(plain);
+        {
+            let l = bb.len();
+            let pl = self.prefix.len();
+            if l > pl && bb[..pl] == self.prefix {
+                bb = bb.split_off(pl);
+            }
+        }
 
-        self.coder.decrypt(&bb)
+        {
+            let l = bb.len();
+            let sl = self.suffix.len();
+            if l > sl && bb[l - sl..] == self.suffix {
+                bb.truncate(l - sl);
+            }
+        }
+
+        bb
     }
 }

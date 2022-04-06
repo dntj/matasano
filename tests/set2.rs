@@ -86,7 +86,7 @@ mod tests {
 
     let unknown = from_base64(&contents).unwrap();
 
-    let encrypter = RandomKeyECB::with_suffix(unknown);
+    let encrypter = RandomKeyECB::new().with_suffix(unknown);
 
     let decrypter = ecb::Decrypter::new(&encrypter);
 
@@ -138,5 +138,23 @@ mod tests {
 
     let profile = decrypt_profile(&enc).unwrap();
     assert_eq!(profile.get("role").unwrap(), "admin");
+  }
+
+  #[test]
+  fn challenge14() {
+    let file = fs::read_to_string("tests/data/12.txt").expect("failed to read file");
+    let contents = file.replace("\n", "");
+
+    let unknown = from_base64(&contents).unwrap();
+
+    let encrypter = RandomKeyECB::new()
+      .with_random_prefix()
+      .with_suffix(unknown);
+
+    let decrypter = ecb::Decrypter::new(&encrypter);
+
+    assert!(str::from_utf8(&decrypter.decrypt().unwrap())
+      .unwrap()
+      .starts_with("Rollin' in my 5.0"));
   }
 }
