@@ -11,18 +11,35 @@ mod tests {
   #[test]
   fn challenge09() {
     assert_eq!(aes::pad(b"YELLOW SUBMARINE", 16), b"YELLOW SUBMARINE");
-    assert_eq!(aes::pad(b"YELLOW SUBMARINE", 17), b"YELLOW SUBMARINE\x04");
+    assert_eq!(aes::pad(b"YELLOW SUBMARINE", 17), b"YELLOW SUBMARINE\x01");
     assert_eq!(
       aes::pad(b"YELLOW SUBMARINE", 18),
-      b"YELLOW SUBMARINE\x04\x04"
+      b"YELLOW SUBMARINE\x02\x02"
     );
     assert_eq!(
       aes::pad(b"YELLOW SUBMARINE", 19),
-      b"YELLOW SUBMARINE\x04\x04\x04"
+      b"YELLOW SUBMARINE\x03\x03\x03"
     );
     assert_eq!(
       aes::pad(b"YELLOW SUBMARINE", 20),
       b"YELLOW SUBMARINE\x04\x04\x04\x04"
+    );
+
+    assert_eq!(
+      aes::unpad(b"YELLOW SUBMARINE\x03".to_vec()),
+      b"YELLOW SUBMARINE\x03"
+    );
+    assert_eq!(
+      aes::unpad(b"YELLOW SUBMARINE\x03\x03".to_vec()),
+      b"YELLOW SUBMARINE\x03\x03"
+    );
+    assert_eq!(
+      aes::unpad(b"YELLOW SUBMARINE\x03\x03\x03".to_vec()),
+      b"YELLOW SUBMARINE"
+    );
+    assert_eq!(
+      aes::unpad(b"YELLOW SUBMARINE\x03\x03\x03\x03".to_vec()),
+      b"YELLOW SUBMARINE\x03"
     );
   }
 
@@ -112,7 +129,7 @@ mod tests {
 
     // Craft 2nd block with `admin` at start, ending with \x04 padding characters.
     let mut pad = String::from("0000000000admin");
-    pad.push_str(str::from_utf8(&[4].repeat(11)).unwrap());
+    pad.push_str(str::from_utf8(&[11].repeat(11)).unwrap());
     let admin_block = &enc_profile_for(&pad)[16..32];
     // Craft email with length such that `user` falls into block by itself.
     let mut enc = enc_profile_for("x@example.com");

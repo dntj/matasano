@@ -47,8 +47,7 @@ impl Decrypter for ECB {
       self.key.decrypt_block(&mut block);
     }
 
-    unpad(&mut bb);
-    bb
+    unpad(bb)
   }
 }
 
@@ -112,8 +111,7 @@ impl Decrypter for CBC {
       }
     }
 
-    unpad(&mut bb);
-    bb
+    unpad(bb)
   }
 }
 
@@ -122,17 +120,26 @@ pub fn pad(bb: &[u8], n: usize) -> Vec<u8> {
 
   if bb.len() % n > 0 {
     let diff = n - bb.len() % n;
-    padded.extend([4].repeat(diff));
+    padded.extend([diff as u8].repeat(diff));
   }
 
   padded
 }
 
-pub fn unpad(bb: &mut Vec::<u8>) {
-  let mut l = bb.len();
-
-  while l > 0 && bb[l - 1] == 4 {
-    bb.pop();
-    l -= 1;
+pub fn unpad(mut bb: Vec<u8>) -> Vec<u8> {
+  let l = bb.len();
+  if l == 0 {
+    return bb;
   }
+
+  let last = bb[l - 1];
+
+  for i in 1..(last as usize) {
+    if bb[l - 1 - i] != last {
+      return bb;
+    }
+  }
+
+  bb.truncate(l - (last as usize));
+  bb
 }
