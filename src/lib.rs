@@ -207,7 +207,11 @@ pub struct RandomKeyECB {
 }
 
 impl RandomKeyECB {
-    pub fn new(suffix: Vec<u8>) -> RandomKeyECB {
+    pub fn new() -> RandomKeyECB {
+        RandomKeyECB::with_suffix(Vec::new())
+    }
+
+    pub fn with_suffix(suffix: Vec<u8>) -> RandomKeyECB {
         let mut key = [0u8; 16];
         OsRng.fill_bytes(&mut key);
 
@@ -224,5 +228,14 @@ impl aes::Encrypter for RandomKeyECB {
         bb.extend(&self.suffix);
 
         self.coder.encrypt(&bb)
+    }
+}
+
+impl aes::Decrypter for RandomKeyECB {
+    fn decrypt(&self, plain: &[u8]) -> Vec<u8> {
+        let mut bb = Vec::from(plain);
+        bb.extend(&self.suffix);
+
+        self.coder.decrypt(&bb)
     }
 }
