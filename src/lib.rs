@@ -243,8 +243,8 @@ impl aes::Encrypter for RandomKeyECB {
 }
 
 impl aes::Decrypter for RandomKeyECB {
-    fn decrypt(&self, plain: &[u8]) -> Vec<u8> {
-        let mut bb = self.coder.decrypt(plain);
+    fn decrypt(&self, plain: &[u8]) -> Result<Vec<u8>, &str> {
+        let mut bb = self.coder.decrypt(plain)?;
         {
             let l = bb.len();
             let pl = self.prefix.len();
@@ -261,6 +261,6 @@ impl aes::Decrypter for RandomKeyECB {
             }
         }
 
-        bb
+        Ok(bb)
     }
 }

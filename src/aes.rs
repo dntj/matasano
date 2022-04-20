@@ -7,7 +7,7 @@ pub trait Encrypter {
 }
 
 pub trait Decrypter {
-  fn decrypt(&self, ciphertext: &[u8]) -> Vec<u8>;
+  fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, &str>;
 }
 
 pub struct ECB {
@@ -40,7 +40,7 @@ impl Encrypter for ECB {
 }
 
 impl Decrypter for ECB {
-  fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
+  fn decrypt(&self, enc: &[u8]) -> Result<Vec<u8>, &str> {
     let mut bb = Vec::from(enc);
     for i in 0..(bb.len() / 16) {
       let mut block = aes::Block::from_mut_slice(&mut bb[i * 16..(i + 1) * 16]);
@@ -94,7 +94,7 @@ impl Encrypter for CBC {
 }
 
 impl Decrypter for CBC {
-  fn decrypt(&self, enc: &[u8]) -> Vec<u8> {
+  fn decrypt(&self, enc: &[u8]) -> Result<Vec<u8>, &str> {
     let mut bb = Vec::from(enc);
     let n = bb.len() / 16;
     for i in 0..n {
@@ -126,20 +126,23 @@ pub fn pad(bb: &[u8], n: usize) -> Vec<u8> {
   padded
 }
 
-pub fn unpad(mut bb: Vec<u8>) -> Vec<u8> {
+pub fn unpad(mut bb: Vec<u8>) -> Result<Vec<u8>, &'static str> {
   let l = bb.len();
   if l == 0 {
-    return bb;
+    return Ok(bb);
   }
 
   let last = bb[l - 1];
+  if last > 15 {
+    return Ok(bb);
+  }
 
   for i in 1..(last as usize) {
     if bb[l - 1 - i] != last {
-      return bb;
+      return Err("padding error");
     }
   }
 
   bb.truncate(l - (last as usize));
-  bb
+  Ok(bb)
 }

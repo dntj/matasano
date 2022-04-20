@@ -100,7 +100,7 @@ mod tests {
     let bb = from_base64(&contents).expect("failed to decode64 contents");
 
     let coder = aes::ECB::new(b"YELLOW SUBMARINE").unwrap();
-    let dec = coder.decrypt(&bb);
+    let dec = coder.decrypt(&bb).unwrap();
 
     assert!(str::from_utf8(&dec)
       .unwrap()
