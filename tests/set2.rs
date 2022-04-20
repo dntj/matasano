@@ -24,23 +24,6 @@ mod tests {
       aes::pad(b"YELLOW SUBMARINE", 20),
       b"YELLOW SUBMARINE\x04\x04\x04\x04"
     );
-
-    assert_eq!(
-      aes::unpad(b"YELLOW SUBMARINE\x03".to_vec()),
-      b"YELLOW SUBMARINE\x03"
-    );
-    assert_eq!(
-      aes::unpad(b"YELLOW SUBMARINE\x03\x03".to_vec()),
-      b"YELLOW SUBMARINE\x03\x03"
-    );
-    assert_eq!(
-      aes::unpad(b"YELLOW SUBMARINE\x03\x03\x03".to_vec()),
-      b"YELLOW SUBMARINE"
-    );
-    assert_eq!(
-      aes::unpad(b"YELLOW SUBMARINE\x03\x03\x03\x03".to_vec()),
-      b"YELLOW SUBMARINE\x03"
-    );
   }
 
   #[test]
@@ -53,7 +36,7 @@ mod tests {
     let iv = [0].repeat(16);
     let k = b"YELLOW SUBMARINE";
     let coder = aes::CBC::new(k, &iv).unwrap();
-    let decrypted = coder.decrypt(&bb);
+    let decrypted = coder.decrypt(&bb).unwrap();
 
     assert!(str::from_utf8(&decrypted)
       .unwrap()
@@ -113,7 +96,7 @@ mod tests {
     };
 
     let decrypt_profile = |ct: &[u8]| -> Result<HashMap<String, String>, std::str::Utf8Error> {
-      let dec = ecb.decrypt(ct);
+      let dec = ecb.decrypt(ct).unwrap();
       let mut result = HashMap::new();
 
       for kv in str::from_utf8(&dec)?.split("&") {
@@ -156,5 +139,19 @@ mod tests {
     assert!(str::from_utf8(&decrypter.decrypt().unwrap())
       .unwrap()
       .starts_with("Rollin' in my 5.0"));
+  }
+
+  #[test]
+  fn challenge15() {
+    assert!(aes::unpad(b"YELLOW SUBMARINE\x03".to_vec()).is_err());
+    assert!(aes::unpad(b"YELLOW SUBMARINE\x03\x03".to_vec()).is_err());
+    assert_eq!(
+      aes::unpad(b"YELLOW SUBMARINE\x03\x03\x03".to_vec()).unwrap(),
+      b"YELLOW SUBMARINE"
+    );
+    assert_eq!(
+      aes::unpad(b"YELLOW SUBMARINE\x03\x03\x03\x03".to_vec()).unwrap(),
+      b"YELLOW SUBMARINE\x03"
+    );
   }
 }

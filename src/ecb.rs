@@ -17,7 +17,7 @@ impl<'a> Decrypter<'a> {
     let sl = self.suffix_len();
 
     let pad = vec![0; 15 * pl % 16];
-    let n_pad_blocks = (pl + 15*pl%16)/16;
+    let n_pad_blocks = (pl + 15 * pl % 16) / 16;
 
     while bb.len() < sl {
       let l = bb.len();
@@ -49,7 +49,7 @@ impl<'a> Decrypter<'a> {
       }
     }
 
-    (j-1)*16
+    (j - 1) * 16
   }
 
   fn suffix_len(&self) -> usize {
@@ -66,7 +66,13 @@ impl<'a> Decrypter<'a> {
     min - self.prefix_len()
   }
 
-  fn next_byte(&self, n_pad_blocks: usize, pad: &[u8], next_index: usize, bb: &[u8]) -> Result<u8, &str> {
+  fn next_byte(
+    &self,
+    n_pad_blocks: usize,
+    pad: &[u8],
+    next_index: usize,
+    bb: &[u8],
+  ) -> Result<u8, &str> {
     let block_number = n_pad_blocks + next_index / 16;
 
     let mut block = Vec::from(pad);
@@ -85,7 +91,7 @@ impl<'a> Decrypter<'a> {
 
       let cipher = self.encrypter.encrypt(&block);
 
-      let got_cipher_block = &cipher[n_pad_blocks*16..(n_pad_blocks+1)*16];
+      let got_cipher_block = &cipher[n_pad_blocks * 16..(n_pad_blocks + 1) * 16];
       if got_cipher_block == want_cipher_block {
         return Ok(i);
       }
