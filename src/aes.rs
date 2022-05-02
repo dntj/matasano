@@ -16,14 +16,10 @@ pub struct ECB {
 
 impl ECB {
   pub fn new(k: &[u8]) -> Result<ECB, String> {
-    let k_res = aes::Aes128::new_from_slice(k);
-    if let Err(_) = k_res {
-      return Err("bad key".to_string());
+    match aes::Aes128::new_from_slice(k) {
+      Ok(k) => Ok(ECB { key: k }),
+      Err(_) => Err("bad key".to_string()),
     }
-
-    Ok(ECB {
-      key: k_res.unwrap(),
-    })
   }
 }
 
