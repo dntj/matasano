@@ -3,9 +3,10 @@ use hex::{FromHex, ToHex};
 use rand::{rngs::OsRng, RngCore};
 use std::collections;
 
-use crate::aes::{Encrypter, ECB};
+use crate::aes::Encrypter;
 
 pub mod aes;
+pub mod cbc;
 pub mod ecb;
 
 pub fn from_hex(h: &str) -> Option<Vec<u8>> {
@@ -165,7 +166,7 @@ pub struct RandomEncrypter {
 }
 
 impl RandomEncrypter {
-    pub fn new(input: &[u8]) -> RandomEncrypter {
+    pub fn new(input: &[u8]) -> Result<RandomEncrypter, &str> {
         let mut key = [0u8; 16];
         OsRng.fill_bytes(&mut key);
 
@@ -185,54 +186,58 @@ impl RandomEncrypter {
 
         if ecb {
             // Choose ECB with 50% probability.
-            RandomEncrypter {
+            Ok(RandomEncrypter {
                 mode: Mode::ECB,
-                ciphertext: aes::ECB::new(&key).unwrap().encrypt(&plain),
-            }
+                ciphertext: aes::ECB::new(&key)?.encrypt(&plain),
+            })
         } else {
             let mut iv = [0u8; 16];
             OsRng.fill_bytes(&mut iv);
 
-            RandomEncrypter {
+            Ok(RandomEncrypter {
                 mode: Mode::CBC,
-                ciphertext: aes::CBC::new(&key, &iv).unwrap().encrypt(&plain),
-            }
+                ciphertext: aes::CBC::new(&key, &iv)?.encrypt(&plain),
+            })
         }
     }
 }
 
-pub struct RandomKeyECB {
-    coder: ECB,
+pub struct RandomKeyCoder<T> {
+    coder: T,
     prefix: Vec<u8>,
     suffix: Vec<u8>,
 }
 
-impl RandomKeyECB {
-    pub fn new() -> RandomKeyECB {
+impl<T> RandomKeyCoder<T> {
+    pub fn new(ctor: &dyn Fn(&[u8]) -> T) -> RandomKeyCoder<T> {
         let mut key = [0u8; 16];
         OsRng.fill_bytes(&mut key);
 
-        RandomKeyECB {
-            coder: aes::ECB::new(&key).unwrap(),
+        RandomKeyCoder {
+            coder: ctor(&key),
             prefix: Vec::new(),
             suffix: Vec::new(),
         }
     }
 
-    pub fn with_random_prefix(self) -> RandomKeyECB {
+    pub fn with_random_prefix(self) -> RandomKeyCoder<T> {
         let l = (OsRng.next_u32() % 256) as usize;
         let mut prefix = vec![0; l];
         OsRng.fill_bytes(&mut prefix);
 
-        RandomKeyECB { prefix, ..self }
+        self.with_prefix(prefix)
     }
 
-    pub fn with_suffix(self, suffix: Vec<u8>) -> RandomKeyECB {
-        RandomKeyECB { suffix, ..self }
+    pub fn with_prefix(self, prefix: Vec<u8>) -> RandomKeyCoder<T> {
+        RandomKeyCoder { prefix, ..self }
+    }
+
+    pub fn with_suffix(self, suffix: Vec<u8>) -> RandomKeyCoder<T> {
+        RandomKeyCoder { suffix, ..self }
     }
 }
 
-impl aes::Encrypter for RandomKeyECB {
+impl<T: aes::Encrypter> aes::Encrypter for RandomKeyCoder<T> {
     fn encrypt(&self, plain: &[u8]) -> Vec<u8> {
         let mut bb = Vec::clone(&self.prefix);
         bb.extend(plain);
@@ -242,7 +247,7 @@ impl aes::Encrypter for RandomKeyECB {
     }
 }
 
-impl aes::Decrypter for RandomKeyECB {
+impl<T: aes::Decrypter> aes::Decrypter for RandomKeyCoder<T> {
     fn decrypt(&self, plain: &[u8]) -> Result<Vec<u8>, &str> {
         let mut bb = self.coder.decrypt(plain)?;
         {
