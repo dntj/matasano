@@ -15,10 +15,10 @@ pub struct ECB {
 }
 
 impl ECB {
-  pub fn new(k: &[u8]) -> Result<ECB, String> {
+  pub fn new(k: &[u8]) -> Result<ECB, &'static str> {
     match aes::Aes128::new_from_slice(k) {
       Ok(k) => Ok(ECB { key: k }),
-      Err(_) => Err("bad key".to_string()),
+      Err(_) => Err("bad key"),
     }
   }
 }
@@ -53,19 +53,18 @@ pub struct CBC {
 }
 
 impl CBC {
-  pub fn new<'a>(k: &[u8], iv: &[u8]) -> Result<CBC, String> {
-    let k_res = aes::Aes128::new_from_slice(k);
-    if let Err(_) = k_res {
-      return Err("bad key".to_string());
-    }
+  pub fn new<'a>(k: &[u8], iv: &[u8]) -> Result<CBC, &'static str> {
     if iv.len() != 16 {
-      return Err("iv must be 16 bytes long".to_string());
+      return Err("iv must be 16 bytes long");
     }
 
-    Ok(CBC {
-      key: k_res.unwrap(),
-      iv: iv.to_owned(),
-    })
+    match aes::Aes128::new_from_slice(k) {
+      Ok(k) => Ok(CBC {
+        key: k,
+        iv: iv.to_owned(),
+      }),
+      Err(_) => Err("bad key"),
+    }
   }
 }
 

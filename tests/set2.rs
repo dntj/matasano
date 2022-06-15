@@ -4,7 +4,8 @@ mod tests {
   use std::fs;
   use std::str;
 
-  use matasano::aes::{Decrypter, Encrypter};
+  use matasano::aes::{Decrypter, Encrypter, CBC, ECB};
+  use matasano::cbc;
   use matasano::ecb;
   use matasano::*;
 
@@ -33,7 +34,7 @@ mod tests {
 
     let bb = from_base64(&contents).expect("failed to decode64 contents");
 
-    let iv = [0].repeat(16);
+    let iv = vec![0; 16];
     let k = b"YELLOW SUBMARINE";
     let coder = aes::CBC::new(k, &iv).unwrap();
     let decrypted = coder.decrypt(&bb).unwrap();
@@ -51,7 +52,7 @@ mod tests {
     let file = fs::read_to_string("tests/data/11.txt").expect("failed to read file");
 
     for _ in 0..10 {
-      let res = RandomEncrypter::new(file.as_bytes());
+      let res = RandomEncrypter::new(file.as_bytes()).unwrap();
       let got = detect_block_mode(&res.ciphertext);
 
       if res.mode == got {
@@ -69,7 +70,8 @@ mod tests {
 
     let unknown = from_base64(&contents).unwrap();
 
-    let encrypter = RandomKeyECB::new().with_suffix(unknown);
+    let encrypter =
+      RandomKeyCoder::new(&|k: &[u8]| -> ECB { ECB::new(k).unwrap() }).with_suffix(unknown);
 
     let decrypter = ecb::Decrypter::new(&encrypter);
 
@@ -80,7 +82,7 @@ mod tests {
 
   #[test]
   fn challenge13() {
-    let ecb = RandomKeyECB::new();
+    let ecb = RandomKeyCoder::new(&|k: &[u8]| -> ECB { ECB::new(k).unwrap() });
 
     let enc_profile_for = |email: &str| -> Vec<u8> {
       let mut kvs = Vec::new();
@@ -130,7 +132,7 @@ mod tests {
 
     let unknown = from_base64(&contents).unwrap();
 
-    let encrypter = RandomKeyECB::new()
+    let encrypter = RandomKeyCoder::new(&|k: &[u8]| -> ECB { ECB::new(k).unwrap() })
       .with_random_prefix()
       .with_suffix(unknown);
 
@@ -153,5 +155,62 @@ mod tests {
       aes::unpad(b"YELLOW SUBMARINE\x03\x03\x03\x03".to_vec()).unwrap(),
       b"YELLOW SUBMARINE\x03"
     );
+  }
+
+
+  struct TransformingEncrypter<'a, T> {
+    encrypter: &'a T,
+    transformer: &'a dyn Fn(&[u8]) -> Vec<u8>,
+  }
+
+  impl <'a, T: aes::Encrypter> aes::Encrypter for TransformingEncrypter<'a, T> {
+    fn encrypt(&self, plaintext: &[u8]) -> Vec<u8> {
+      let transformer = self.transformer;
+
+      self.encrypter.encrypt(&transformer(plaintext))
+    }
+  }
+
+  #[test]
+  fn challenge16() {
+    let cbc = RandomKeyCoder::new(&|k: &[u8]| -> CBC { aes::CBC::new(k, &vec![0; 16]).unwrap() })
+      .with_prefix(b"comment1=cooking%20MCs;userdata=".to_vec())
+      .with_suffix(b";comment2=%20like%20a%20pound%20of%20bacon".to_vec());
+
+    let enc = TransformingEncrypter{
+      encrypter: &cbc,
+      transformer: &|s: &[u8]| -> Vec::<u8> {
+        let mut bb = Vec::<u8>::new();
+
+        for v in s {
+          match v {
+            b';' => bb.extend(b"%3B"),
+            b'=' => bb.extend(b"%3D"),
+            _ => bb.push(*v),
+          }
+        }
+
+        bb
+      },
+    };
+
+    let is_admin = |ct: &[u8]| -> bool {
+      let dec = cbc.decrypt(ct).unwrap();
+
+      for kv in String::from_utf8_lossy(&dec).split(";") {
+        if kv == "admin=true" {
+          return true;
+        }
+      }
+
+      false
+    };
+
+    assert!(!is_admin(&enc.encrypt(&";admin=true".as_bytes())));
+
+    let inj = cbc::Injector::new(&enc);
+    let ct = inj.inject(2, ";admin=true;abc=", ";comment2=%20lik");
+
+    assert!(is_admin(&ct));
   }
 }

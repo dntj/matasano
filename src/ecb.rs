@@ -1,11 +1,11 @@
 use crate::aes;
 
-pub struct Decrypter<'a> {
-  encrypter: &'a dyn aes::Encrypter,
+pub struct Decrypter<'a, T: aes::Encrypter> {
+  encrypter: &'a T,
 }
 
-impl<'a> Decrypter<'a> {
-  pub fn new(encrypter: &'a dyn aes::Encrypter) -> Decrypter {
+impl<'a, T: aes::Encrypter> Decrypter<'a, T> {
+  pub fn new(encrypter: &T) -> Decrypter<T> {
     Decrypter {
       encrypter: encrypter,
     }
